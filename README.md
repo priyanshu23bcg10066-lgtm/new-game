@@ -1,5 +1,7 @@
 chaleenge i faces 
 
-The game character making
-In level design the game architecture 
-All code combine and make one
+1.The game character making  
+
+2. In level design the game architecture
+3. 
+3.All code combine and make one
