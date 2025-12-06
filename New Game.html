@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Top Down Shooter - One File Game</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<style>
+body {
+    margin: 0;
+    background: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+}
+#hud {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+    color: #ff0;
+}
+canvas {
+    background: #222;
+    border: 5px solid #000;
+    image-rendering: pixelated;
+}
+</style>
+</head>
+
+<body>
+<div id="hud">WASD = Move • Arrow Keys = Shoot</div>
+<canvas id="game" width="600" height="480"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let keys = {};
+let bullets = [];
+let enemies = [];
+let particles = [];
+
+class Player {
+    constructor() {
+        this.x = 300;
+        this.y = 240;
+        this.w = 20;
+        this.h = 20;
+        this.speed = 200;
+        this.health = 100;
+    }
+    update(dt) {
+        if (keys["w"]) this.y -= this.speed * dt;
+        if (keys["s"]) this.y += this.speed * dt;
+        if (keys["a"]) this.x -= this.speed * dt;
+        if (keys["d"]) this.x += this.speed * dt;
+
+        this.x = Math.max(0, Math.min(canvas.width - this.w, this.x));
+        this.y = Math.max(0, Math.min(canvas.height - this.h, this.y));
+    }
+    draw() {
+        ctx.fillStyle = "#0f0";
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+class Bullet {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.w = 6;
+        this.h = 6;
+        this.vx = vx;
+        this.vy = vy;
+    }
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height)
+            this.dead = true;
+
+        enemies.forEach(e => {
+            if (this.x < e.x + e.w && this.x + this.w > e.x &&
+                this.y < e.y + e.h && this.y + this.h > e.y) {
+                this.dead = true;
+                e.health -= 20;
+                if (e.health <= 0) e.dead = true;
+            }
+        });
+    }
+    draw() {
+        ctx.fillStyle = "#ff0";
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+class Enemy {
+    constructor() {
+        this.x = Math.random() * 580;
+        this.y = Math.random() * 460;
+        this.w = 20;
+        this.h = 20;
+        this.speed = 80;
+        this.health = 40;
+    }
+    update(dt) {
+        let angle = Math.atan2(player.y - this.y, player.x - this.x);
+        this.x += Math.cos(angle) * this.speed * dt;
+        this.y += Math.sin(angle) * this.speed * dt;
+
+        // damage player
+        if (this.x < player.x + player.w &&
+            this.x + this.w > player.x &&
+            this.y < player.y + player.h &&
+            this.y + this.h > player.y) {
+            player.health -= 20 * dt;
+        }
+    }
+    draw() {
+        ctx.fillStyle = "#f33";
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+function shoot(dir) {
+    let speed = 300;
+    let vx = 0, vy = 0;
+    if (dir === "up") vy = -speed;
+    if (dir === "down") vy = speed;
+    if (dir === "left") vx = -speed;
+    if (dir === "right") vx = speed;
+
+    bullets.push(new Bullet(player.x + 7, player.y + 7, vx, vy));
+}
+
+// input
+window.addEventListener("keydown", e => {
+    keys[e.key] = true;
+
+    if (e.key === "ArrowUp") shoot("up");
+    if (e.key === "ArrowDown") shoot("down");
+    if (e.key === "ArrowLeft") shoot("left");
+    if (e.key === "ArrowRight") shoot("right");
+});
+
+window.addEventListener("keyup", e => keys[e.key] = false);
+
+let player = new Player();
+
+// spawn enemies every 1.5 seconds
+setInterval(() => enemies.push(new Enemy()), 1500);
+
+let last = performance.now();
+
+function gameLoop(t) {
+    let dt = (t - last) / 1000;
+    last = t;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function update(dt) {
+    player.update(dt);
+
+    bullets.forEach(b => b.update(dt));
+    bullets = bullets.filter(b => !b.dead);
+
+    enemies.forEach(e => e.update(dt));
+    enemies = enemies.filter(e => !e.dead);
+
+    if (player.health <= 0) {
+        alert("GAME OVER!");
+        window.location.reload();
+    }
+}
+
+function draw() {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    player.draw();
+    bullets.forEach(b => b.draw());
+    enemies.forEach(e => e.draw());
+
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Health: " + Math.floor(player.health), 10, 20);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>
